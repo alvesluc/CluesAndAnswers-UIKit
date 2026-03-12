@@ -43,12 +43,17 @@ class ViewController: UIViewController {
     }
     
     func loadLevel() {
-        var clueString = ""
-        var solutionString = ""
-        var letterBits = [String]()
-        
-        if let levelFileURL = Bundle.main.url(forResource: "level\(level)", withExtension: "txt") {
-            if let levelContents = try? String(contentsOf: levelFileURL, encoding: .utf8) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            var clueString = ""
+            var solutionString = ""
+            var letterBits = [String]()
+            var loadedSolutions = [String]()
+            
+            if let levelFileURL = Bundle.main.url(forResource: "level\(self.level)", withExtension: "txt"),
+               let levelContents = try? String(contentsOf: levelFileURL, encoding: .utf8) {
+                
                 var lines = levelContents.components(separatedBy: "\n")
                 lines.shuffle()
                 
@@ -61,22 +66,24 @@ class ViewController: UIViewController {
                     
                     let solutionWord = answer.replacingOccurrences(of: "|", with: "")
                     solutionString += "\(solutionWord.count) letters\n"
-                    solutions.append(solutionWord)
+                    self.solutions.append(solutionWord)
                     
                     let bits = answer.components(separatedBy: "|")
                     letterBits += bits
                 }
             }
-        }
-        
-        cluesLabel.text = clueString.trimmingCharacters(in: .newlines)
-        answersLabel.text = solutionString.trimmingCharacters(in: .newlines)
-        
-        letterBits.shuffle()
-        
-        if letterBits.count == letterButtons.count {
-            for i in 0..<letterButtons.count {
-                letterButtons[i].setTitle(letterBits[i], for: .normal)
+            
+            letterBits.shuffle()
+            
+            DispatchQueue.main.async {
+                self.cluesLabel.text = clueString.trimmingCharacters(in: .newlines)
+                self.answersLabel.text = solutionString.trimmingCharacters(in: .newlines)
+                
+                if letterBits.count == self.letterButtons.count {
+                    for i in 0..<self.letterButtons.count {
+                        self.letterButtons[i].setTitle(letterBits[i], for: .normal)
+                    }
+                }
             }
         }
     }
@@ -177,7 +184,7 @@ class ViewController: UIViewController {
         clearButton.titleLabel?.font = .preferredFont(forTextStyle: .title3)
         clearButton.addAction(UIAction { [weak self] _ in
             guard let self = self else { return }
-
+            
             self.currentAnswer.text = ""
             self.activatedButtons.forEach { $0.isHidden = false }
             self.activatedButtons.removeAll()
